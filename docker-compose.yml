@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  app-database:
+    image: postgres:16-alpine
+    container_name: app-database
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - lab-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app-backend:
+    build: .
+    container_name: app-backend
+    ports:
+      - "5000:3000"
+    env_file:
+      - .env
+    networks:
+      - lab-network
+    depends_on:
+      - app-database
+
+networks:
+  lab-network:
+    driver: bridge
+volumes:
+    postgres_data:
