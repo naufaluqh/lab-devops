@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "hardcoded-postgres-password"
+description = "Hardcoded POSTGRES_PASSWORD value in config files"
+regex = '''POSTGRES_PASSWORD\s*[:=]\s*['"]?[A-Za-z0-9_\-]{6,}'''
+keywords = ["postgres_password"]
+
+  # Throwaway credential for the ephemeral CI database (reviewed, not a real secret)
+  [[rules.allowlists]]
+  description = "CI-only throwaway database password"
+  paths = ['''\.github/workflows/ci-actions\.yml''']
