@@ -1,15 +1,20 @@
-version: '3.8'
-
 services:
   app-database:
     image: postgres:16-alpine
     container_name: app-database
     environment:
+      POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     networks:
       - lab-network
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app-backend:
     build: .
@@ -21,10 +26,12 @@ services:
     networks:
       - lab-network
     depends_on:
-      - app-database
+      app-database:
+        condition: service_healthy
 
 networks:
   lab-network:
     driver: bridge
+
 volumes:
-    postgres_data:
+  postgres_data:

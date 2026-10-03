@@ -4,9 +4,11 @@
   "description": "Automated Testing and Containerization Lab",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "test": "jest"
-  },
+   "start": "node src/server.js",
+   "test": "npm run test:unit",
+   "test:unit": "jest test/app.test.js",
+   "test:integration": "jest test/integration.test.js --runInBand"
+},
   "dependencies": {
     "dotenv": "^18.0.5",
     "express": "^4.19.2",

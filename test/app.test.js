@@ -1,6 +1,8 @@
 const request = require('supertest');
 const app = require('../src/app');
+const { Pool } = require('pg');
 
+// Jest mock block preventing live database dependencies (unit test layer)
 jest.mock('pg', () => {
     const mPool = {
         query: jest.fn().mockResolvedValue({
@@ -13,8 +15,8 @@ jest.mock('pg', () => {
     return { Pool: jest.fn(() => mPool) };
 });
 
-describe('DevOps API Endpoint Verification Tests', () => {
-    
+describe('DevOps API Unit Tests (mocked database)', () => {
+
     it('should return 200 OK and render secure HTML visual interface', async () => {
         const res = await request(app).get('/');
         expect(res.statusCode).toEqual(200);
@@ -27,5 +29,17 @@ describe('DevOps API Endpoint Verification Tests', () => {
         expect(res.statusCode).toEqual(200);
         expect(res.body.status).toEqual('UP');
     });
-});
 
+    it('should escape HTML in stored content (XSS protection)', async () => {
+        const mPool = new Pool(); // returns the same mocked pool instance
+        mPool.query
+            .mockResolvedValueOnce({})  // CREATE TABLE
+            .mockResolvedValueOnce({    // SELECT
+                rows: [{ id: 1, content: '<script>alert(1)</script>', created_at: new Date() }]
+            });
+
+        const res = await request(app).get('/');
+        expect(res.text).not.toContain('<script>alert(1)</script>');
+        expect(res.text).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    });
+});

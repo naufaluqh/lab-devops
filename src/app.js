@@ -6,6 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Secure database pool configuration leveraging dynamic environment variables
 const pool = new Pool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -14,11 +15,22 @@ const pool = new Pool({
     port: parseInt(process.env.DB_PORT || "5432")
 });
 
+// Escape user-controlled text before inserting it into HTML (XSS protection)
+const escapeHtml = (value) =>
+    String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+// Asynchronous Request Logger Middleware for terminal observability
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} request received at: ${req.url}`);
     next();
 });
 
+// Root route: Creates table if absent, queries data, and renders English HTML UI
 app.get('/', async (req, res) => {
     try {
         await pool.query(`
@@ -29,11 +41,11 @@ app.get('/', async (req, res) => {
             )
         `);
         const result = await pool.query('SELECT * FROM devops_logs ORDER BY created_at DESC');
-        let rowsHtml = result.rows.map(row => 
-            `<li><strong>[${row.created_at.toLocaleTimeString()}]</strong> ${row.content}</li>`
+        const rowsHtml = result.rows.map(row =>
+            `<li><strong>[${row.created_at.toLocaleTimeString()}]</strong> ${escapeHtml(row.content)}</li>`
         ).join('');
 
-        let html = `
+        const html = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -66,24 +78,26 @@ app.get('/', async (req, res) => {
         res.status(200).send(html);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Database Integration Connection Error: " + err.message);
+        res.status(500).send("Database Integration Connection Error: " + escapeHtml(err.message));
     }
 });
 
+// Endpoint to receive post submission from visual interface form
 app.post('/add-data', async (req, res) => {
     const { logContent } = req.body;
     try {
-        await pool.query('INSERT INTO devops_logs (content) VALUES (\$1)', [logContent]);
+        await pool.query('INSERT INTO devops_logs (content) VALUES ($1)', [logContent]);
         res.redirect('/');
     } catch (err) {
         console.error(err);
-        res.status(500).send("Failed to save data: " + err.message);
+        res.status(500).send("Failed to save data: " + escapeHtml(err.message));
     }
 });
 
-// 🚀 TAMBAHKAN KEMBALI ENDPOINT HEALTH CHECK YANG HILANG DI SINI (Wajib English)
+// Automated environment health check endpoint (CI/CD smoke tests target)
 app.get('/health', (req, res) => {
     res.status(200).json({ status: "UP", timestamp: new Date() });
 });
 
 module.exports = app;
+module.exports.pool = pool; // exported so integration tests can close the connection
