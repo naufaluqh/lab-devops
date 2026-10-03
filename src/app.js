@@ -1,4 +1,4 @@
-require('dotenv').config(); // 🚀 AKTIFKAN DETEKSI FILE .ENV
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const app = express();
@@ -6,7 +6,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 🔒 KODE AMAN: MENGMANDATKAN DATA DARI VARIABEL LINGKUNGAN
 const pool = new Pool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -15,17 +14,13 @@ const pool = new Pool({
     port: parseInt(process.env.DB_PORT || "5432")
 });
 
-
-// Middleware logger for transparency
 app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} request received at: ${req.url}`);
     next();
 });
 
-// Endpoint to render HTML interface dynamically
 app.get('/', async (req, res) => {
     try {
-        // Create table if not exists in app-database
         await pool.query(`
             CREATE TABLE IF NOT EXISTS devops_logs (
                 id SERIAL PRIMARY KEY,
@@ -33,11 +28,7 @@ app.get('/', async (req, res) => {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-
-        // Fetch all stored data from database
         const result = await pool.query('SELECT * FROM devops_logs ORDER BY created_at DESC');
-        
-        // Build interactive visual interface string
         let rowsHtml = result.rows.map(row => 
             `<li><strong>[${row.created_at.toLocaleTimeString()}]</strong> ${row.content}</li>`
         ).join('');
@@ -61,15 +52,13 @@ app.get('/', async (req, res) => {
         <body>
             <div class="card">
                 <h2>🚀 DevOps Persistence Automation Lab</h2>
-                <p>Status Database: <strong>CONNECTED TO POSTGRES</strong></p>
-                
+                <p>Database Status: <strong>CONNECTED TO POSTGRES</strong></p>
                 <form action="/add-data" method="POST">
-                    <input type="text" name="logContent" placeholder="Ketik data eksperimen di sini..." required>
-                    <button type="submit">Simpan Data</button>
+                    <input type="text" name="logContent" placeholder="Type experimental data here..." required>
+                    <button type="submit">Save Data</button>
                 </form>
-
-                <h3>📊 Data Tersegmentasi di PostgreSQL Volume:</h3>
-                <ul>${rowsHtml || '<li>Belum ada data di dalam brankas volume.</li>'}</ul>
+                <h3>📊 Stored Data in PostgreSQL Volume:</h3>
+                <ul>${rowsHtml || '<li>No data found inside the volume storage vault.</li>'}</ul>
             </div>
         </body>
         </html>
@@ -81,7 +70,6 @@ app.get('/', async (req, res) => {
     }
 });
 
-// Endpoint to receive post submission from visual interface form
 app.post('/add-data', async (req, res) => {
     const { logContent } = req.body;
     try {
@@ -93,5 +81,9 @@ app.post('/add-data', async (req, res) => {
     }
 });
 
-module.exports = app;
+// 🚀 TAMBAHKAN KEMBALI ENDPOINT HEALTH CHECK YANG HILANG DI SINI (Wajib English)
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: "UP", timestamp: new Date() });
+});
 
+module.exports = app;
